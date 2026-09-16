@@ -1,10 +1,12 @@
-pub fn generate_seed() -> u64 {
-    0
+use getrandom;
+
+fn generate_aes128_private_key() -> [u8; 16] {
+    let mut key = [0u8; 16];
+    getrandom::fill(&mut key).expect("OS random generator failed");
+    key
 }
 
-pub fn derive_password() -> u8 {
-    0
-}
+fn encrypt_aes128_password() {}
 
 fn main() {
     println!("Hello, world!");
