@@ -1,13 +1,15 @@
 // Use implementations
+
 use getrandom::fill;
 
 // Types annotation
 
-type Block = [u8; 16];
-type State = [Block; 16];
 type Word = [u8; 4];
+type Block = [u8; 16];
+type State = [Word; 4];
 
 // Constants
+
 const S_BOX: [u8; 256] = [
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -27,50 +29,102 @@ const S_BOX: [u8; 256] = [
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
 ];
 
-fn generate_private_key() -> Result<[u8; 16], getrandom::Error> {
-    let mut key = [0u8; 16];
-    fill(&mut key)?;
-    Ok(key)
-}
-
-fn xor_words(a: Word, b: Word) -> Word {
-    [a[0] ^ b[0], a[1] ^ b[1], a[2] ^ b[2], a[3] ^ b[3]]
-}
-
-fn sub_byte(b: u8, s_box: [u8; 256]) -> u8 {
-    s_box[b as usize]
-}
-
-fn sub_bytes(state: &mut State, s_box: [u8; 256]) -> () {
-    for row in 0..3 {
-        for column in 0..3 {
-            state[row][column] = sub_byte(state[row][column], s_box)
+fn generate_private_key(key: &mut [u8; 16]) -> () {
+    match fill(key) {
+        Ok(()) => (),
+        Err(err) => {
+            panic!("Couldn't fill in AES-128 key: {}", err);
         }
     }
 }
 
-fn aes128_encrypt(key: [u8; 16], s_box: [u8; 256]) {}
+fn shift_rows(state: &mut State) {
+    state.swap(1, 5);
+    state.swap(6, 10);
+    state.swap(11, 15);
+}
+
+fn mix_columns(state: &mut State) {
+    // !!TODO!!
+    // Write the mix column function.
+}
+
+fn add_round_key(state: &mut State, key: Block) {
+    state[0][0] ^= key[0];
+    state[0][1] ^= key[1];
+    state[0][2] ^= key[2];
+    state[0][3] ^= key[3];
+    state[1][0] ^= key[4];
+    state[1][1] ^= key[5];
+    state[1][2] ^= key[6];
+    state[1][3] ^= key[7];
+    state[2][0] ^= key[8];
+    state[2][1] ^= key[9];
+    state[2][2] ^= key[10];
+    state[2][3] ^= key[11];
+    state[3][0] ^= key[12];
+    state[3][1] ^= key[13];
+    state[3][2] ^= key[14];
+    state[3][3] ^= key[15];
+}
+
+fn aes128_encrypt(state: &mut State, key: Block, s_box: [u8; 256]) {
+    for _ in 0..10 {}
+}
 
 // PKCS7 padding
 fn apply_padding(input: &[u8]) -> [u8; 16] {
-    let padding_len = (16 - (input.len() % 16)) as usize;
+    let input_len = input.len();
     let mut output = [0u8; 16];
 
-    for i in 0..padding_len {
-        output[i] = 0
+    for i in 0..(input_len - 1) {
+        output[i] = input[i];
     }
-    for i in padding_len..15 {
-        output[i] = input[i - padding_len]
+
+    if input_len < 16 {
+        let padding_len = (16 - (input.len() % 16)) as u8;
+
+        for i in (padding_len as usize)..(16 - input_len) {
+            output[i] = padding_len
+        }
     }
 
     output
 }
 
+fn block_to_state(b: Block) -> State {
+    [
+        [b[0], b[4], b[8], b[12]],
+        [b[1], b[5], b[9], b[13]],
+        [b[2], b[6], b[10], b[14]],
+        [b[3], b[7], b[11], b[15]],
+    ]
+}
+
+fn state_to_block(state: State) -> Block {
+    [
+        state[0][0],
+        state[1][0],
+        state[2][0],
+        state[3][0],
+        state[0][1],
+        state[1][1],
+        state[2][1],
+        state[3][1],
+        state[0][2],
+        state[1][2],
+        state[2][2],
+        state[3][2],
+        state[0][3],
+        state[1][3],
+        state[2][3],
+        state[3][3],
+    ]
+}
+
 fn main() -> std::io::Result<()> {
-    let aes128_key = match generate_private_key() {
-        Ok(key) => key,
-        Err(_) => panic!("Couldn't fill in the AES-128 private key."),
-    };
+    let mut key = [0u8; 16];
+    generate_private_key(&mut key);
 
     let mut input_buffer = String::new();
     let stdin = std::io::stdin();
@@ -79,7 +133,21 @@ fn main() -> std::io::Result<()> {
     let plaintext_as_bytes = input_buffer.as_bytes();
     for chunk in plaintext_as_bytes.chunks(16) {
         let padded_chunk = apply_padding(chunk);
+        let mut padded_state = block_to_state(padded_chunk);
+
+        aes128_encrypt(&mut padded_state, key, S_BOX);
     }
 
     Ok(())
 }
+
+// binary to hex for bit operations
+// 0000 -> 0    1001 -> 9
+// 0001 -> 1    1010 -> A
+// 0010 -> 2    1011 -> B
+// 0011 -> 3    1100 -> C
+// 0100 -> 4    1101 -> D
+// 0101 -> 5    1110 -> E
+// 0110 -> 6    1111 -> F
+// 0111 -> 7
+// 1000 -> 8
