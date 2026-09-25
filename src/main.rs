@@ -3,8 +3,8 @@ use getrandom::fill;
 
 // Types annotation
 
-type Block = [u8; 4];
-type State = [Block; 4];
+type Block = [u8; 16];
+type State = [Block; 16];
 type Word = [u8; 4];
 
 // Constants
@@ -27,19 +27,51 @@ const S_BOX: [u8; 256] = [
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
 ];
 
-// PKCS7 padding
-fn apply_padding(input: &[u8]) -> Vec<u8> {
-    let padding_len = (16 - (input.len() % 16)) as u8;
-    let mut output = input.to_vec();
+fn generate_private_key() -> Result<[u8; 16], getrandom::Error> {
+    let mut key = [0u8; 16];
+    fill(&mut key)?;
+    Ok(key)
+}
 
-    for _ in 0..padding_len {
-        output.push(padding_len);
+fn xor_words(a: Word, b: Word) -> Word {
+    [a[0] ^ b[0], a[1] ^ b[1], a[2] ^ b[2], a[3] ^ b[3]]
+}
+
+fn sub_byte(b: u8, s_box: [u8; 256]) -> u8 {
+    s_box[b as usize]
+}
+
+fn sub_bytes(state: &mut State, s_box: [u8; 256]) -> () {
+    for row in 0..3 {
+        for column in 0..3 {
+            state[row][column] = sub_byte(state[row][column], s_box)
+        }
+    }
+}
+
+fn aes128_encrypt(key: [u8; 16], s_box: [u8; 256]) {}
+
+// PKCS7 padding
+fn apply_padding(input: &[u8]) -> [u8; 16] {
+    let padding_len = (16 - (input.len() % 16)) as usize;
+    let mut output = [0u8; 16];
+
+    for i in 0..padding_len {
+        output[i] = 0
+    }
+    for i in padding_len..15 {
+        output[i] = input[i - padding_len]
     }
 
     output
 }
 
 fn main() -> std::io::Result<()> {
+    let aes128_key = match generate_private_key() {
+        Ok(key) => key,
+        Err(_) => panic!("Couldn't fill in the AES-128 private key."),
+    };
+
     let mut input_buffer = String::new();
     let stdin = std::io::stdin();
     stdin.read_line(&mut input_buffer)?;
