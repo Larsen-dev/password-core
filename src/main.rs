@@ -38,15 +38,40 @@ fn generate_private_key(key: &mut [u8; 16]) -> () {
     }
 }
 
+fn sub_bytes(state: &mut State, s_box: [u8; 256]) {
+    for row in state {
+        for column in row {
+            *column = s_box[*column as usize];
+        }
+    }
+}
+
 fn shift_rows(state: &mut State) {
-    state.swap(1, 5);
-    state.swap(6, 10);
-    state.swap(11, 15);
+    state[1].rotate_left(1);
+    state[2].rotate_left(2);
+    state[3].rotate_left(3);
+}
+
+fn xtime(x: u8) -> u8 {
+    if x & 0x80 != 0 {
+        (x << 1) ^ 0x1b
+    } else {
+        x << 1
+    }
 }
 
 fn mix_columns(state: &mut State) {
-    // !!TODO!!
-    // Write the mix column function.
+    for column in 0..4 {
+        let a = state[0][column];
+        let b = state[1][column];
+        let c = state[2][column];
+        let d = state[3][column];
+
+        state[0][column] = xtime(a) ^ (xtime(b) ^ b) ^ c ^ d;
+        state[1][column] = a ^ xtime(b) ^ (xtime(c) ^ c) ^ d;
+        state[2][column] = a ^ b ^ xtime(c) ^ (xtime(d) ^ d);
+        state[3][column] = (xtime(a) ^ a) ^ b ^ c ^ xtime(d);
+    }
 }
 
 fn add_round_key(state: &mut State, key: Block) {
@@ -69,7 +94,16 @@ fn add_round_key(state: &mut State, key: Block) {
 }
 
 fn aes128_encrypt(state: &mut State, key: Block, s_box: [u8; 256]) {
-    for _ in 0..10 {}
+    for _ in 0..10 {
+        sub_bytes(state, s_box);
+        shift_rows(state);
+        mix_columns(state);
+        add_round_key(state, key);
+    }
+
+    sub_bytes(state, s_box);
+    shift_rows(state);
+    add_round_key(state, key);
 }
 
 // PKCS7 padding
@@ -96,7 +130,7 @@ fn block_to_state(b: Block) -> State {
     [
         [b[0], b[4], b[8], b[12]],
         [b[1], b[5], b[9], b[13]],
-        [b[2], b[6], b[10], b[14]],
+        [b[2], b[6], b[10], b[44]],
         [b[3], b[7], b[11], b[15]],
     ]
 }
@@ -136,6 +170,8 @@ fn main() -> std::io::Result<()> {
         let mut padded_state = block_to_state(padded_chunk);
 
         aes128_encrypt(&mut padded_state, key, S_BOX);
+
+        let encrypted_state = state_to_block(padded_state);
     }
 
     Ok(())
