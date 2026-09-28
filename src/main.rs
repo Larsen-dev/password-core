@@ -1,12 +1,11 @@
-// Use implementations
-
-use getrandom::fill;
+// I strongly recomend you to not use my code: first of all: I'm a beginner and I can't
+// guarantee you what my code is 100% correct and capable of all sort of tasks you might
+// think of. This is just simple AES-128 implementation I'm making by myself for practice
 
 // Types annotation
 
-type Word = [u8; 4];
 type Block = [u8; 16];
-type State = [Word; 4];
+type State = [[u8; 4]; 4];
 
 // Constants
 
@@ -28,162 +27,39 @@ const S_BOX: [u8; 256] = [
     0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
 ];
+const ASCII: [&str; 129] = [
+    "\0", "\x01", "\x02", "\x03", "\x04", "\x05", "\x06", "\x07", "\x08", "\x09", "\x0a", "\x0b",
+    "\x0c", "\x0d", "\x0e", "\x0f", "\x10", "\x11", "\x12", "\x13", "\x14", "\x15", "\x16", "\x17",
+    "\x18", "\x19", "\x1a", "\x1b", "\x1c", "\x1d", "\x1e", "\x1f", " ", "!", "\"", "#", "$", "%",
+    "&", "'", "(", ")", "*", "+", ",", "-", ".", "/", "0", "1", "2", "3", "4", "5", "6", "7", "8",
+    "9", ":", ";", "<", "=", ">", "?", "@", "A", "B", "C", "D", "B", "E", "F", "G", "H", "I", "J",
+    "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]",
+    "^", "_", "`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p",
+    "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~", "\x7f",
+]; // For future cipher text representation
 
-fn generate_private_key(key: &mut [u8; 16]) -> () {
-    match fill(key) {
-        Ok(()) => (),
-        Err(err) => {
-            panic!("Couldn't fill in AES-128 key: {}", err);
-        }
-    }
-}
-
-fn sub_bytes(state: &mut State, s_box: [u8; 256]) {
-    for row in state {
-        for column in row {
-            *column = s_box[*column as usize];
-        }
-    }
-}
-
-fn shift_rows(state: &mut State) {
-    state[1].rotate_left(1);
-    state[2].rotate_left(2);
-    state[3].rotate_left(3);
-}
-
-fn xtime(x: u8) -> u8 {
+// Galois multiplication with x2
+fn xtime(mut x: u8) -> u8 {
     if x & 0x80 != 0 {
-        (x << 1) ^ 0x1b
+        x <<= 1 ^ 0x1b
     } else {
-        x << 1
-    }
-}
-
-fn mix_columns(state: &mut State) {
-    for column in 0..4 {
-        let a = state[0][column];
-        let b = state[1][column];
-        let c = state[2][column];
-        let d = state[3][column];
-
-        state[0][column] = xtime(a) ^ (xtime(b) ^ b) ^ c ^ d;
-        state[1][column] = a ^ xtime(b) ^ (xtime(c) ^ c) ^ d;
-        state[2][column] = a ^ b ^ xtime(c) ^ (xtime(d) ^ d);
-        state[3][column] = (xtime(a) ^ a) ^ b ^ c ^ xtime(d);
-    }
-}
-
-fn add_round_key(state: &mut State, key: Block) {
-    state[0][0] ^= key[0];
-    state[0][1] ^= key[1];
-    state[0][2] ^= key[2];
-    state[0][3] ^= key[3];
-    state[1][0] ^= key[4];
-    state[1][1] ^= key[5];
-    state[1][2] ^= key[6];
-    state[1][3] ^= key[7];
-    state[2][0] ^= key[8];
-    state[2][1] ^= key[9];
-    state[2][2] ^= key[10];
-    state[2][3] ^= key[11];
-    state[3][0] ^= key[12];
-    state[3][1] ^= key[13];
-    state[3][2] ^= key[14];
-    state[3][3] ^= key[15];
-}
-
-fn aes128_encrypt(state: &mut State, key: Block, s_box: [u8; 256]) {
-    for _ in 0..10 {
-        sub_bytes(state, s_box);
-        shift_rows(state);
-        mix_columns(state);
-        add_round_key(state, key);
+        x <<= 1
     }
 
-    sub_bytes(state, s_box);
-    shift_rows(state);
-    add_round_key(state, key);
+    x
 }
 
-// PKCS7 padding
-fn apply_padding(input: &[u8]) -> [u8; 16] {
-    let input_len = input.len();
-    let mut output = [0u8; 16];
+fn aes128_encrypt(block: Block, key: Block) {}
 
-    for i in 0..(input_len - 1) {
-        output[i] = input[i];
-    }
+fn get_padded_state(block: Block) -> State {}
 
-    if input_len < 16 {
-        let padding_len = (16 - (input.len() % 16)) as u8;
+fn aes128_cbc_encrypt(iv: Block, data_buf: String) -> String {
+    let output_buf = String::new();
+    let data_as_ascll = data_buf.as_bytes();
 
-        for i in (padding_len as usize)..(16 - input_len) {
-            output[i] = padding_len
-        }
-    }
+    for chunk in data_as_ascll.chunks(16) {}
 
-    output
+    output_buf
 }
 
-fn block_to_state(b: Block) -> State {
-    [
-        [b[0], b[4], b[8], b[12]],
-        [b[1], b[5], b[9], b[13]],
-        [b[2], b[6], b[10], b[44]],
-        [b[3], b[7], b[11], b[15]],
-    ]
-}
-
-fn state_to_block(state: State) -> Block {
-    [
-        state[0][0],
-        state[1][0],
-        state[2][0],
-        state[3][0],
-        state[0][1],
-        state[1][1],
-        state[2][1],
-        state[3][1],
-        state[0][2],
-        state[1][2],
-        state[2][2],
-        state[3][2],
-        state[0][3],
-        state[1][3],
-        state[2][3],
-        state[3][3],
-    ]
-}
-
-fn main() -> std::io::Result<()> {
-    let mut key = [0u8; 16];
-    generate_private_key(&mut key);
-
-    let mut input_buffer = String::new();
-    let stdin = std::io::stdin();
-    stdin.read_line(&mut input_buffer)?;
-
-    let plaintext_as_bytes = input_buffer.as_bytes();
-    for chunk in plaintext_as_bytes.chunks(16) {
-        let padded_chunk = apply_padding(chunk);
-        let mut padded_state = block_to_state(padded_chunk);
-
-        aes128_encrypt(&mut padded_state, key, S_BOX);
-
-        let encrypted_state = state_to_block(padded_state);
-    }
-
-    Ok(())
-}
-
-// binary to hex for bit operations
-// 0000 -> 0    1001 -> 9
-// 0001 -> 1    1010 -> A
-// 0010 -> 2    1011 -> B
-// 0011 -> 3    1100 -> C
-// 0100 -> 4    1101 -> D
-// 0101 -> 5    1110 -> E
-// 0110 -> 6    1111 -> F
-// 0111 -> 7
-// 1000 -> 8
+fn main() {}
