@@ -73,10 +73,34 @@ fn add_round_key(state: &mut State, key: &Block) {
     }
 }
 
-pub fn cbc_encode(iv: Block, data: &[u8], key: &Block) {
-    for chunk in data.chunks(16) {}
+fn get_padded(chunk: &[u8]) -> Block {
+    let chunk_size = chunk.len();
+    let padding = 16 - (chunk_size % 16) as u8;
+    let mut output_block = [0u8; 16];
+
+    for i in 0..16 {
+        output_block[i] = if i < chunk_size { chunk[i] } else { padding };
+    }
+
+    output_block
 }
 
-pub fn ebc_encode(data: &[u8], key: &Block) {
-    for chunk in data.chunks(16) {}
+pub fn cbc_encode(iv: Block, data: &[u8], key: &Block) -> Vec<Block> {
+    let output: Vec<Block> = vec![];
+
+    for chunk in data.chunks(16) {
+        let padded = get_padded(chunk);
+    }
+
+    output
+}
+
+pub fn ebc_encode(data: &[u8], key: &Block) -> Vec<Block> {
+    let output: Vec<Block> = vec![];
+
+    for chunk in data.chunks(16) {
+        let padded = get_padded(chunk);
+    }
+
+    output
 }
