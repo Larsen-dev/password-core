@@ -40,9 +40,9 @@ fn xtime(mut x: u8) -> u8 {
 // Encryption functions
 
 fn sub_bytes(state: &mut State) {
-    for column in state {
+    for column_i in 0..4 {
         for row_i in 0..4 {
-            column[row_i] = S_BOX[column[row_i] as usize];
+            state[row_i][column_i] = S_BOX[state[row_i][column_i] as usize];
         }
     }
 }
@@ -68,9 +68,56 @@ fn mix_columns(state: &mut State) {
 fn add_round_key(state: &mut State, key: &Block) {
     for column_i in 0..4 {
         for row_i in 0..4 {
-            state[column_i][row_i] ^= key[column_i * row_i];
+            state[row_i][column_i] ^= key[row_i * (column_i + 1)];
         }
     }
+}
+
+fn block_to_state(block: &Block) -> State {
+    [
+        [block[0], block[4], block[8], block[12]],
+        [block[1], block[5], block[9], block[13]],
+        [block[2], block[6], block[10], block[14]],
+        [block[3], block[7], block[11], block[15]],
+    ]
+}
+
+fn state_to_block(state: &State) -> Block {
+    [
+        state[0][0],
+        state[1][0],
+        state[2][0],
+        state[3][0],
+        state[0][1],
+        state[1][1],
+        state[2][1],
+        state[3][1],
+        state[0][2],
+        state[1][2],
+        state[2][2],
+        state[3][2],
+        state[0][3],
+        state[1][3],
+        state[2][3],
+        state[3][3],
+    ]
+}
+
+fn block_encrypt(block: &Block, key: &Block) -> Block {
+    let mut state = block_to_state(&block);
+
+    for _ in 0..10 {
+        sub_bytes(&mut state);
+        shift_rows(&mut state);
+        mix_columns(&mut state);
+        add_round_key(&mut state, key);
+    }
+
+    sub_bytes(&mut state);
+    shift_rows(&mut state);
+    add_round_key(&mut state, key);
+
+    state_to_block(&state)
 }
 
 fn get_padded(chunk: &[u8]) -> Block {
@@ -85,21 +132,32 @@ fn get_padded(chunk: &[u8]) -> Block {
     output_block
 }
 
-pub fn cbc_encode(iv: Block, data: &[u8], key: &Block) -> Vec<Block> {
-    let output: Vec<Block> = vec![];
+pub fn cbc_encode(iv: &Block, data: &[u8], key: &Block) -> Vec<Block> {
+    let previous = iv;
+    let mut output: Vec<Block> = vec![];
 
     for chunk in data.chunks(16) {
-        let padded = get_padded(chunk);
+        let mut padded = get_padded(chunk);
+        for i in 0..16 {
+            padded[i] ^= previous[i];
+        }
+
+        let encrypted = block_encrypt(&padded, &key);
+
+        output.push(encrypted);
     }
 
     output
 }
 
 pub fn ebc_encode(data: &[u8], key: &Block) -> Vec<Block> {
-    let output: Vec<Block> = vec![];
+    let mut output: Vec<Block> = vec![];
 
     for chunk in data.chunks(16) {
         let padded = get_padded(chunk);
+        let encrypted = block_encrypt(&padded, key);
+
+        output.push(encrypted);
     }
 
     output

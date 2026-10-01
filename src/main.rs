@@ -1,6 +1,5 @@
-// I strongly recomend you to not use my code: first of all: I'm a beginner and I can't
-// guarantee you what my code is 100% correct and capable of all sort of tasks you might
-// think of. This is just simple AES-128 implementation I'm making by myself for practice
+// I strongly do not recomend you to use my code since it's learning project which
+// means I can be wrong with my AES implementation, data transition, etc.
 
 // Use Implementation
 
@@ -32,6 +31,7 @@ fn main() -> Result<(), ()> {
     let key = key_generation::generate_128key();
     let input_as_bytes = input_buffer.as_bytes();
     let output_ebc_test = aes::ebc_encode(input_as_bytes, &key);
+    let output_cbc_test = aes::cbc_encode(&[0u8; 16], input_as_bytes, &key);
 
     Ok(())
 }
