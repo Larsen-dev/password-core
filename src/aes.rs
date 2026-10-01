@@ -29,9 +29,9 @@ const S_BOX: [u8; 256] = [
 // Galois multiplication with x2
 fn xtime(mut x: u8) -> u8 {
     if x & 0x80 != 0 {
-        x <<= 1 ^ 0x1b
+        x = (x << 1) ^ 0x1b;
     } else {
-        x <<= 1
+        x <<= 1;
     }
 
     x
