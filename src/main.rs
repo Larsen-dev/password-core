@@ -28,10 +28,30 @@ fn main() -> Result<(), ()> {
         }
     };
 
-    let key = key_generation::generate_128key();
+    // let key = key_generation::generate_128key();
+    let key = [
+        0u8, 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 8u8, 9u8, 10u8, 11u8, 12u8, 13u8, 14u8, 15u8,
+    ];
     let input_as_bytes = input_buffer.as_bytes();
+
     let output_ebc_test = aes::ebc_encode(input_as_bytes, &key);
     let output_cbc_test = aes::cbc_encode(&[0u8; 16], input_as_bytes, &key);
+
+    let mut text_repr_ebc = String::new();
+    for i in 0..output_ebc_test.len() {
+        for j in 0..16 {
+            text_repr_ebc.push(output_ebc_test[i][j] as char);
+        }
+    }
+
+    let mut text_repr_cbc = String::new();
+    for i in 0..output_cbc_test.len() {
+        for j in 0..16 {
+            text_repr_cbc.push(output_cbc_test[i][j] as char);
+        }
+    }
+
+    println!("{} {}", text_repr_ebc, text_repr_ebc);
 
     Ok(())
 }
